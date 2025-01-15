@@ -32,8 +32,8 @@ def load_credentials(session_name):
 
 # Function to display banner
 def display_banner():
-    print(Fore.RED + pyfiglet.figlet_format("LEGITDEALS9"))
-    print(Fore.GREEN + "Made by @Legitdeals9\n")
+    print(Fore.RED + pyfiglet.figlet_format("RIO-ADRUN"))
+    print(Fore.GREEN + "Made by @UncountableAura\n")
 
 # Function to login and forward messages
 async def login_and_forward(api_id, api_hash, phone_number, session_name):
