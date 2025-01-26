@@ -107,7 +107,7 @@ async def on_new_message(event):
 async def main():
     # Set up the bot
     bot_token = "8075027784:AAHbomx4HBS8GvZGKnOuRwcgDBMzdZTxodw"  # Replace with your bot's token
-    bot = TelegramClient("bot_session", api_id=0, api_hash="")  # Dummy API ID and Hash; bot token will handle login
+    bot = TelegramClient("bot_session", api_id=26416419, api_hash="c109c77f5823c847b1aeb7fbd4990cc4")  # Dummy API ID and Hash; bot token will handle login
 
     @bot.on(events.NewMessage)
     async def message_handler(event):
