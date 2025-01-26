@@ -1,51 +1,57 @@
 from telethon import TelegramClient, events
-from telethon.errors import SessionPasswordNeededError
+from telethon.errors import SessionPasswordNeededError, FloodWaitError
 import asyncio
 
-# === Option 1: Use a bot token ===
-BOT_TOKEN = "8075027784:AAHbomx4HBS8GvZGKnOuRwcgDBMzdZTxodw"  # Replace with your bot token from BotFather
-USE_BOT_TOKEN = True  # Set to True if you want to use the bot token
-
-# === Option 2: Use your user account ===
+# === User Account Configuration ===
 API_ID = 26416419  # Replace with your API ID from my.telegram.org
 API_HASH = "c109c77f5823c847b1aeb7fbd4990cc4"  # Replace with your API Hash
-PHONE_NUMBER = "+1234567890"  # Replace with your phone number if using a user account
+PHONE_NUMBER = "+8801634532670"  # Replace with your phone number if using a user account
 
 
 # Function to join groups
 async def join_groups(client, group_links):
+    success_count = 0
+    failure_count = 0
+
     for link in group_links:
         try:
+            # Attempt to join the group
             await client.join_chat(link.strip())
             print(f"Successfully joined: {link}")
+            success_count += 1
+        except FloodWaitError as e:
+            print(f"Rate limited! Need to wait for {e.seconds} seconds before the next attempt.")
+            await asyncio.sleep(e.seconds)  # Wait for the specified time
         except Exception as e:
             print(f"Failed to join {link}: {e}")
+            failure_count += 1
+
+    # Provide a summary
+    print(f"\nSummary:\n  Successfully joined: {success_count}\n  Failed to join: {failure_count}")
+    return success_count, failure_count
 
 
 async def main():
-    # Initialize client based on the chosen method
-    if USE_BOT_TOKEN:
-        print("Starting bot with bot token...")
-        client = TelegramClient("bot_session", api_id=26416419, api_hash="c109c77f5823c847b1aeb7fbd4990cc4").start(bot_token=BOT_TOKEN)
-    else:
-        print("Starting bot with user account...")
-        client = TelegramClient("user_session", API_ID, API_HASH)
+    print("Starting bot with user account...")
 
-        await client.connect()
+    # Initialize client
+    client = TelegramClient("user_session", API_ID, API_HASH)
 
-        # If not logged in, perform login process
-        if not await client.is_user_authorized():
-            await client.send_code_request(PHONE_NUMBER)
-            otp = input("Enter the OTP sent to your Telegram account: ")
-            try:
-                await client.sign_in(PHONE_NUMBER, otp)
-            except SessionPasswordNeededError:
-                password = input("Your account has 2FA enabled. Enter your password: ")
-                await client.sign_in(password=password)
+    await client.connect()
 
-    print("Bot is ready!")
+    # If not logged in, perform login process
+    if not await client.is_user_authorized():
+        await client.send_code_request(PHONE_NUMBER)
+        otp = input("Enter the OTP sent to your Telegram account: ")
+        try:
+            await client.sign_in(PHONE_NUMBER, otp)
+        except SessionPasswordNeededError:
+            password = input("Your account has 2FA enabled. Enter your password: ")
+            await client.sign_in(password=password)
 
-    # Start handling commands
+    print("Logged in successfully!")
+
+    # Register event handlers
     @client.on(events.NewMessage(pattern="/start"))
     async def start_handler(event):
         await event.respond(
@@ -56,8 +62,8 @@ async def main():
     async def message_handler(event):
         if event.text.startswith("http"):
             group_links = event.text.splitlines()
-            await join_groups(client, group_links)
-            await event.respond("I have successfully processed the links.")
+            success, failure = await join_groups(client, group_links)
+            await event.respond(f"Task complete!\nSuccessfully joined: {success}\nFailed to join: {failure}")
 
     # Run until disconnected
     await client.run_until_disconnected()
