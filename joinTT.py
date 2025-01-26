@@ -26,7 +26,7 @@ async def main():
     # Initialize client based on the chosen method
     if USE_BOT_TOKEN:
         print("Starting bot with bot token...")
-        client = TelegramClient("bot_session", api_id=0, api_hash="").start(bot_token=BOT_TOKEN)
+        client = TelegramClient("bot_session", api_id=26416419, api_hash="c109c77f5823c847b1aeb7fbd4990cc4").start(bot_token=BOT_TOKEN)
     else:
         print("Starting bot with user account...")
         client = TelegramClient("user_session", API_ID, API_HASH)
