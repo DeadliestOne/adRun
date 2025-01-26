@@ -9,8 +9,8 @@ user_data = {}
 bot = Client(
     "telegram_bot",
     api_id=26416419,  # Replace with your Bot API ID
-    api_hash=c109c77f5823c847b1aeb7fbd4990cc4,  # Replace with your Bot API Hash
-    bot_token=8075027784:AAHbomx4HBS8GvZGKnOuRwcgDBMzdZTxodw,  # Replace with your Bot Token
+    api_hash= "c109c77f5823c847b1aeb7fbd4990cc4",  # Replace with your Bot API Hash
+    bot_token= "8075027784:AAHbomx4HBS8GvZGKnOuRwcgDBMzdZTxodw" ,  # Replace with your Bot Token
 )
 
 @bot.on_message(filters.private & filters.command("start"))
