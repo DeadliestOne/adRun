@@ -115,9 +115,9 @@ async def main():
 
     # Start the bot with the token
     await bot.start(bot_token=bot_token)
-    print("EonRobot.core.main - database loaded successfully.
-           EonRobot.bot.userbot - Eon On The Way 💗
-          @EonRobot Started Successfully!! .")
+    print("EonRobot-core-main - database loaded successfully.
+           EonRobot-bot-userbot - Eon On The Way 💗
+          @EonRobot-Started Successfully!! .")
 
     # Run bot until manually stopped
     await bot.run_until_disconnected()
