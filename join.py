@@ -7,8 +7,8 @@ BOT_TOKEN = "8075027784:AAHbomx4HBS8GvZGKnOuRwcgDBMzdZTxodw"  # Replace with you
 USE_BOT_TOKEN = True  # Set to True if you want to use the bot token
 
 # === Option 2: Use your user account ===
-API_ID = 123456  # Replace with your API ID from my.telegram.org
-API_HASH = "your_api_hash_here"  # Replace with your API Hash
+API_ID = 26416419  # Replace with your API ID from my.telegram.org
+API_HASH = "c109c77f5823c847b1aeb7fbd4990cc4"  # Replace with your API Hash
 PHONE_NUMBER = "+1234567890"  # Replace with your phone number if using a user account
 
 
