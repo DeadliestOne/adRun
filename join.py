@@ -107,14 +107,17 @@ async def on_new_message(event):
 async def main():
     # Set up the bot
     bot_token = "8075027784:AAHbomx4HBS8GvZGKnOuRwcgDBMzdZTxodw"  # Replace with your bot's token
-    bot = TelegramClient("bot_session", bot_token=bot_token)  # Initialize bot client with token
+    bot = TelegramClient("bot_session", api_id=0, api_hash="")  # Dummy API ID and Hash; bot token will handle login
 
     @bot.on(events.NewMessage)
     async def message_handler(event):
         await on_new_message(event)
 
-    await bot.start(bot_token=bot_token)  # Start the bot with the token
-    print("Bot is running...")
+    # Start the bot with the token
+    await bot.start(bot_token=bot_token)
+    print("EonRobot.core.main - database loaded successfully.
+           EonRobot.bot.userbot - Eon On The Way 💗
+          @EonRobot Started Successfully!! .")
 
     # Run bot until manually stopped
     await bot.run_until_disconnected()
