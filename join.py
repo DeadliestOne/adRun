@@ -1,79 +1,124 @@
-from pyrogram import Client, filters
-from pyrogram.errors import FloodWait, InviteHashInvalid, UserAlreadyParticipant
+from telethon import TelegramClient, events
+from telethon.errors import SessionPasswordNeededError, FloodWaitError
 import asyncio
 
-# Dictionary to store user data temporarily
-user_data = {}
+# Store user credentials temporarily
+user_credentials = {}
 
-# Start a simple Pyrogram app
-bot = Client(
-    "telegram_bot",
-    api_id=26416419,  # Replace with your Bot API ID
-    api_hash= "c109c77f5823c847b1aeb7fbd4990cc4",  # Replace with your Bot API Hash
-    bot_token= "8075027784:AAHbomx4HBS8GvZGKnOuRwcgDBMzdZTxodw" ,  # Replace with your Bot Token
-)
+# Function to join groups
+async def join_groups(client, group_links):
+    success_count = 0
+    failure_count = 0
 
-@bot.on_message(filters.private & filters.command("start"))
-async def start(client, message):
-    await message.reply("Welcome! Please provide your phone number to log in (format: +1234567890).")
+    for link in group_links:
+        try:
+            # Attempt to join the group
+            await client.join_chat(link.strip())
+            print(f"Successfully joined: {link}")
+            success_count += 1
+        except FloodWaitError as e:
+            print(f"Rate limited! Need to wait for {e.seconds} seconds before the next attempt.")
+            await asyncio.sleep(e.seconds)  # Wait for the specified time
+        except Exception as e:
+            print(f"Failed to join {link}: {e}")
+            failure_count += 1
 
-@bot.on_message(filters.private & ~filters.command("start"))
-async def handle_message(client, message):
-    user_id = message.from_user.id
-    text = message.text
+    # Provide a summary
+    print(f"\nSummary:\n  Successfully joined: {success_count}\n  Failed to join: {failure_count}")
+    return success_count, failure_count
 
-    # Check if the user has sent the phone number
-    if user_id not in user_data:
-        user_data[user_id] = {"phone_number": text}
-        await message.reply("Phone number saved! Now provide your API ID.")
-    elif "api_id" not in user_data[user_id]:
-        user_data[user_id]["api_id"] = text
-        await message.reply("API ID saved! Now provide your API Hash.")
-    elif "api_hash" not in user_data[user_id]:
-        user_data[user_id]["api_hash"] = text
-        await message.reply("API Hash saved! You can now send me the group links (separated by spaces or new lines).")
-    elif "links" not in user_data[user_id]:
-        user_data[user_id]["links"] = text.split()
-        await message.reply("Links received! Attempting to join groups...")
 
-        # Start joining groups
-        phone_number = user_data[user_id]["phone_number"]
-        api_id = int(user_data[user_id]["api_id"])
-        api_hash = user_data[user_id]["api_hash"]
-        links = user_data[user_id]["links"]
+# Function to handle multiple accounts
+async def handle_multiple_accounts(account_details, group_links):
+    tasks = []
+    for account in account_details:
+        api_id, api_hash, phone_number = account
+        client = TelegramClient(f"{phone_number}_session", api_id, api_hash)
 
-        await join_groups(user_id, phone_number, api_id, api_hash, links, message)
+        # Handling login process
+        async def login_and_join():
+            await client.connect()
+            if not await client.is_user_authorized():
+                await client.send_code_request(phone_number)
+                otp = user_credentials.get(phone_number, {}).get("otp")
+                if not otp:
+                    print(f"OTP not found for {phone_number}, skipping...")
+                    return
+                try:
+                    await client.sign_in(phone_number, otp)
+                except SessionPasswordNeededError:
+                    password = user_credentials.get(phone_number, {}).get("password")
+                    if password:
+                        await client.sign_in(password=password)
+                    else:
+                        print(f"Password missing for {phone_number}, skipping...")
+                        return
+            
+            # Join groups for this account
+            success, failure = await join_groups(client, group_links)
+            print(f"Account {phone_number}:\n  Successfully joined: {success}\n  Failed to join: {failure}")
+            await client.disconnect()
 
-async def join_groups(user_id, phone_number, api_id, api_hash, links, message):
-    # Create a new Pyrogram client for the user
-    async with Client(f"session_{user_id}", api_id=api_id, api_hash=api_hash) as user_client:
-        joined_count = 0
-        total_links = len(links)
+        tasks.append(login_and_join())
 
-        for link in links:
-            try:
-                if link.startswith("@"):
-                    await user_client.join_chat(link)
-                elif "t.me/" in link:
-                    chat_username = link.split("t.me/")[-1]
-                    await user_client.join_chat(chat_username)
-                else:
-                    await message.reply(f"Invalid link format: {link}")
-                    continue
+    await asyncio.gather(*tasks)
 
-                joined_count += 1
-                await message.reply(f"Successfully joined: {link}")
-            except UserAlreadyParticipant:
-                await message.reply(f"Already a member of: {link}")
-            except InviteHashInvalid:
-                await message.reply(f"Invalid invite link: {link}")
-            except FloodWait as e:
-                await message.reply(f"Rate limit reached. Waiting for {e.value} seconds...")
-                await asyncio.sleep(e.value)
-            except Exception as e:
-                await message.reply(f"Failed to join {link}: {e}")
 
-        await message.reply(f"Joined {joined_count}/{total_links} groups successfully!")
+# Function to handle new messages in DM
+async def on_new_message(event):
+    # Start or handle messages from the user (bot DM)
+    if event.text.lower() == '/start':
+        await event.respond("Hi! Please provide the following information to proceed:\n\n"
+                            "1. API ID\n"
+                            "2. API Hash\n"
+                            "3. Phone Number\n")
+    elif event.text.startswith("API ID:"):
+        # Extract API ID, Hash, and Phone Number
+        api_id = int(event.text.split(":")[1].strip())
+        await event.respond("Great! Now please provide the API hash:")
+        user_credentials[event.sender_id] = {"api_id": api_id}
+    elif event.text.startswith("API Hash:"):
+        api_hash = event.text.split(":")[1].strip()
+        user_credentials[event.sender_id]["api_hash"] = api_hash
+        await event.respond("Awesome! Now, please enter your phone number:")
+    elif event.text.startswith("Phone Number:"):
+        phone_number = event.text.split(":")[1].strip()
+        user_credentials[event.sender_id]["phone_number"] = phone_number
+        await event.respond(f"Thanks! An OTP will be sent to {phone_number}. Please enter the OTP here.")
+    elif event.text.startswith("OTP:"):
+        otp = event.text.split(":")[1].strip()
+        user_credentials[event.sender_id]["otp"] = otp
+        await event.respond("Thanks for providing the OTP! Now, you can send the group links you'd like to join.")
+    else:
+        # Handle group links
+        group_links = event.text.splitlines()
+        if group_links:
+            # Once all credentials are gathered, proceed to join groups
+            account_details = [(user_credentials[event.sender_id]["api_id"],
+                                user_credentials[event.sender_id]["api_hash"],
+                                user_credentials[event.sender_id]["phone_number"])]
+            await handle_multiple_accounts(account_details, group_links)
+            await event.respond("Done! Groups joined successfully.")
+        else:
+            await event.respond("Please send valid group links to join.")
 
-# Run the bot
-bot.run()
+
+# Main function to run the bot
+async def main():
+    # Set up the bot
+    bot_token = "8075027784:AAHbomx4HBS8GvZGKnOuRwcgDBMzdZTxodw"  # Replace with your bot's token
+    bot = TelegramClient("bot_session", bot_token=bot_token)  # Initialize bot client with token
+
+    @bot.on(events.NewMessage)
+    async def message_handler(event):
+        await on_new_message(event)
+
+    await bot.start(bot_token=bot_token)  # Start the bot with the token
+    print("Bot is running...")
+
+    # Run bot until manually stopped
+    await bot.run_until_disconnected()
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
